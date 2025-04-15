@@ -1,3 +1,4 @@
+// src/components/HazardForm.vue
 <template>
   <div class="w-full min-h-[40vh] bg-[#f5f5f5] p-6 flex items-center justify-center">
     <form @submit.prevent="submitForm" class="space-y-4 max-w-2xl w-full bg-white p-6 rounded shadow">
@@ -33,25 +34,49 @@
 </template>
 
 <script setup>
+import { useReCaptcha } from 'vue-recaptcha-v3'
 import { ref } from 'vue'
+import axios from 'axios'
+
+const { executeRecaptcha } = useReCaptcha()
 
 const form = ref({
   hazardType: 'Pothole',
   location: '',
-  description: ''
+  description: '',
+  botCheck: ''
 })
 
-function submitForm() {
-  console.log('Form submitted:', form.value)
+const submitted = ref(false)
 
-  // TODO: send to custom API
-  alert('Thank you for your report!')
+const submitForm = async () => {
+  if (submitted.value) return
+  submitted.value = true
 
-  // Reset form
-  form.value = {
-    hazardType: 'Pothole',
-    location: '',
-    description: ''
+  try {
+
+    const token = await executeRecaptcha('submit')
+
+    const response = await axios.post('http://localhost:3000/api/report', {
+      ...form.value,
+      recaptchaToken: token
+    })
+
+    if (response.data?.message) {
+      alert('Report submitted!')
+      form.value = {
+        hazardType: 'Pothole',
+        location: '',
+        description: '',
+        botCheck: ''
+      }
+    }
+  } catch (err) {
+    alert('Error submitting the form.')
+    console.error(err)
   }
+
+  submitted.value = false
 }
 </script>
+
